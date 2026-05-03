@@ -1,0 +1,6 @@
+{
+  "name": "VacciTrack",
+  "description": "A comprehensive child vaccination management system featuring registration, tracking, and automated email reminders.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

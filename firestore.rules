@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { 
+      return isSignedIn() && (
+        request.auth.token.email_verified == true || 
+        request.auth.token.firebase.sign_in_provider == 'anonymous'
+      ); 
+    }
+    
+    // User Roles Lookup
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+    
+    function userExists(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid));
+    }
+    
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'dharitriii01@gmail.com' ||
+        (userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'admin')
+      );
+    }
+    
+    function isWorker() {
+      return isVerified() && userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'worker';
+    }
+    
+    function isStaff() {
+      // Direct email check for the bootstrap phase
+      return isVerified() && (
+        request.auth.token.email == 'dharitriii01@gmail.com' ||
+        (userExists(request.auth.uid) && (getUserData(request.auth.uid).role == 'admin' || getUserData(request.auth.uid).role == 'worker'))
+      );
+    }
+    
+    function isParentOf(childId) {
+      return isSignedIn() && (
+        (userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'parent' && getUserData(request.auth.uid).id == 'p-' + childId) ||
+        (request.auth.token.firebase.sign_in_provider == 'anonymous')
+      );
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'username', 'fullname', 'role', 'active']) &&
+             data.id is string && data.id.size() <= 64 &&
+             data.username is string && data.username.size() <= 128 &&
+             data.fullname is string && data.fullname.size() <= 128 &&
+             data.role in ['admin', 'worker', 'parent'] &&
+             data.active is bool &&
+             (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 128)) &&
+             (!data.keys().hasAny(['authUid']) || (data.authUid is string && data.authUid.size() <= 128)) &&
+             (!data.keys().hasAny(['password']) || (data.password is string && data.password.size() <= 128));
+    }
+
+    function isValidVaccine(data) {
+      return data.keys().hasAll(['id', 'name', 'ageWeeks', 'doses']) &&
+             data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.ageWeeks is number && data.ageWeeks >= 0 &&
+             data.doses is number && data.doses >= 1 &&
+             (!data.keys().hasAny(['desc']) || (data.desc is string && data.desc.size() <= 500));
+    }
+
+    function isValidChild(data) {
+      return data.keys().hasAll(['id', 'name', 'dob', 'gender', 'guardian', 'phone', 'email', 'hospital', 'parentPassword']) &&
+             data.id is string && data.id.size() <= 64 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.dob is string && data.dob.size() <= 20 &&
+             data.gender in ['Male', 'Female', 'Other'] &&
+             data.guardian is string && data.guardian.size() <= 128 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.email is string && data.email.size() <= 128 &&
+             data.hospital is string && data.hospital.size() <= 128 &&
+             data.parentPassword is string && data.parentPassword.size() <= 64 &&
+             (!data.keys().hasAny(['address']) || (data.address is string && data.address.size() <= 512)) &&
+             (!data.keys().hasAny(['state']) || (data.state is string && data.state.size() <= 64)) &&
+             (!data.keys().hasAny(['city']) || (data.city is string && data.city.size() <= 64)) &&
+             (!data.keys().hasAny(['locality']) || (data.locality is string && data.locality.size() <= 128)) &&
+             (!data.keys().hasAny(['registeredBy']) || (data.registeredBy is string && data.registeredBy.size() <= 128)) &&
+             (!data.keys().hasAny(['registeredAt']) || (data.registeredAt is string && data.registeredAt.size() <= 128));
+    }
+
+    function isValidRecord(data) {
+      return data.keys().hasAll(['childId', 'vaccineId', 'status']) &&
+             data.childId is string && data.childId.size() <= 64 &&
+             data.vaccineId is string && data.vaccineId.size() <= 64 &&
+             data.status in ['pending', 'completed', 'missed'] &&
+             (!data.keys().hasAny(['date']) || (data.date is string && data.date.size() <= 20)) &&
+             (!data.keys().hasAny(['batchNo']) || (data.batchNo is string && data.batchNo.size() <= 64)) &&
+             (!data.keys().hasAny(['administeredBy']) || (data.administeredBy is string && data.administeredBy.size() <= 128));
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow list: if isStaff() || (isSignedIn() && (resource.id == request.auth.uid || resource.data.authUid == request.auth.uid));
+      allow create: if (isAdmin() || request.auth.uid == userId) && isValidUser(incoming());
+      allow update: if (isAdmin() || (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['password', 'fullname', 'username', 'active']))) 
+                    && isValidUser(incoming());
+    }
+
+    match /vaccines/{vaccineId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff() && isValidVaccine(incoming());
+    }
+
+    match /children/{childId} {
+      allow list: if isStaff() || (isSignedIn() && (
+        (userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'parent' && resource.data.id == getUserData(request.auth.uid).id.replace('p-', '')) ||
+        (request.auth.token.firebase.sign_in_provider == 'anonymous' && resource.data.parentPassword != null && resource.data.parentPassword.size() > 0)
+      ));
+      allow get: if isStaff() || isParentOf(childId) || (request.auth.token.firebase.sign_in_provider == 'anonymous');
+      allow create: if isStaff() && isValidChild(incoming());
+      allow update: if (isStaff() || isParentOf(childId)) && 
+                    isValidChild(incoming()) &&
+                    incoming().id == existing().id;
+      
+      match /records/{vaccineId} {
+        allow read: if isStaff() || isParentOf(childId);
+        allow write: if isStaff() && isValidRecord(incoming());
+      }
+    }
+
+    match /all_records/{recordId} {
+      allow list: if isStaff() || (isSignedIn() && userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'parent' && resource.data.childId == getUserData(request.auth.uid).id.replace('p-', ''));
+      allow get: if isStaff() || (isSignedIn() && userExists(request.auth.uid) && (resource == null || resource.data.childId == getUserData(request.auth.uid).id.replace('p-', '')));
+      allow create, update: if isStaff() && isValidRecord(incoming());
+      allow delete: if isStaff();
+    }
+
+    match /reminders/{reminderId} {
+      allow list: if isStaff() || (isSignedIn() && userExists(request.auth.uid) && getUserData(request.auth.uid).role == 'parent' && resource.data.childId == getUserData(request.auth.uid).id.replace('p-', ''));
+      allow get: if isStaff();
+      allow create: if isStaff() && isValidId(reminderId);
+    }
+
+  }
+}

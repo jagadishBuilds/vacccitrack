@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System users (admins, workers)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string", "description": "Stored encrypted or managed by Auth" },
+        "fullname": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "worker", "parent"] },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "username", "fullname", "role", "active"]
+    },
+    "Vaccine": {
+      "title": "Vaccine",
+      "description": "Available vaccines and their schedule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ageWeeks": { "type": "number" },
+        "doses": { "type": "number" },
+        "desc": { "type": "string" }
+      },
+      "required": ["id", "name", "ageWeeks", "doses"]
+    },
+    "Child": {
+      "title": "Child",
+      "description": "Registered children in the system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "dob": { "type": "string", "format": "date" },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other"] },
+        "guardian": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "state": { "type": "string" },
+        "city": { "type": "string" },
+        "locality": { "type": "string" },
+        "hospital": { "type": "string" },
+        "parentPassword": { "type": "string" },
+        "registeredBy": { "type": "string" },
+        "registeredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "dob", "gender", "guardian", "phone", "email", "hospital", "parentPassword"]
+    },
+    "VaccinationRecord": {
+      "title": "VaccinationRecord",
+      "description": "Record of a dose administered to a child",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "childId": { "type": "string" },
+        "vaccineId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed", "missed"] },
+        "date": { "type": "string", "format": "date" },
+        "batchNo": { "type": "string" },
+        "administeredBy": { "type": "string" },
+        "updatedBy": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["childId", "vaccineId", "status"]
+    },
+    "ReminderLog": {
+      "title": "ReminderLog",
+      "description": "Log of email reminders sent",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "childId": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" },
+        "sentBy": { "type": "string" }
+      },
+      "required": ["id", "childId", "email", "status", "sentAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/vaccines/{vaccineId}": {
+      "schema": "Vaccine",
+      "description": "Vaccine definitions"
+    },
+    "/children/{childId}": {
+      "schema": "Child",
+      "description": "Child profiles"
+    },
+    "/children/{childId}/records/{vaccineId}": {
+      "schema": "VaccinationRecord",
+      "description": "Vaccination records for a specific child"
+    },
+    "/reminders/{reminderId}": {
+      "schema": "ReminderLog",
+      "description": "Email reminder logs"
+    }
+  }
+}

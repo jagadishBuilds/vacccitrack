@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", serif;
+
+  --color-primary: #0a6e5e;
+  --color-primary-light: #e6f4f1;
+  --color-primary-mid: #12a08a;
+  --color-accent: #f4a022;
+  --color-accent-light: #fef4e3;
+  --color-danger: #e05050;
+  --color-danger-light: #fdeaea;
+  --color-info: #3b82f6;
+  --color-info-light: #eff6ff;
+  --color-sidebar-bg: #071f1b;
+  --color-sidebar-text: #a8ccc8;
+  --color-sidebar-active: #12a08a;
+  --color-body-bg: #f0f5f4;
+  --color-card-bg: #ffffff;
+  --color-text-main: #1a2e2b;
+  --color-text-muted: #6b8c88;
+  --color-border: #d4e8e4;
+
+  --shadow-custom: 0 2px 16px rgba(10, 110, 94, 0.08);
+  --shadow-auth: 0 24px 80px rgba(0, 0, 0, 0.3);
+}
+
+@layer base {
+  body {
+    @apply bg-body-bg text-text-main font-sans;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+.auth-card {
+  @apply bg-white rounded-[20px] p-10 md:p-12 w-full max-w-[420px] shadow-auth;
+}
+
+.stat-card {
+  @apply bg-card-bg rounded-2xl p-6 shadow-custom border border-border transition-transform duration-200 hover:-translate-y-0.5 relative overflow-hidden;
+}
+
+.card-custom {
+  @apply bg-white rounded-2xl shadow-custom border border-border overflow-hidden;
+}
+
+.table-custom th {
+  @apply bg-body-bg px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border;
+}
+
+.table-custom td {
+  @apply px-4 py-3.5 align-middle border-b border-border/50 text-sm;
+}
+
+.btn-primary-custom {
+  @apply bg-primary text-white rounded-xl px-5 py-3 text-sm font-semibold transition-all hover:bg-[#085a4d] active:scale-95 disabled:opacity-50;
+}
+
+.btn-sm-custom {
+  @apply px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all;
+}
+
+.badge-custom {
+  @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold;
+}
+
+.form-control-custom {
+  @apply w-full border-[1.5px] border-border rounded-xl px-4 py-2.5 text-sm transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none;
+}
+
+.progress-bar {
+  @apply h-1.5 bg-border rounded-full overflow-hidden w-24;
+}
+
+.progress-fill {
+  @apply h-full bg-primary-mid rounded-full transition-all duration-500;
+}
